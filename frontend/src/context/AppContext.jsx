@@ -7,7 +7,7 @@ export const AppContext = createContext();
 const AppContextProvider = (props) => {
 
 
-    const backendurl = "https://pawvaidya-veteranary-consultancy-platform.onrender.com"
+    const backendurl = "https://pawvaidya-production-ready.onrender.com"
     const [isLoggedin , setisLoggedin] = useState(false)
     const [doctors , setdoctors] = useState([])
     const [token , settoken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : null)
