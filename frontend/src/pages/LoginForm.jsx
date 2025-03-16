@@ -137,7 +137,7 @@ const LoginForm = () => {
             </div>
             
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/signup')}
               className="w-full bg-[#656ca3] text-white py-4 rounded-xl font-semibold 
                        hover:bg-[#393d60] transition-all duration-300 
                        transform hover:scale-[1.01] active:scale-[0.99] shadow-lg"
