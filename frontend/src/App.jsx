@@ -35,7 +35,6 @@ const App = () => {
       <Route path='/login' element={<Signup />} />
       <Route path='/email-verify' element={<Emailverify />} />
       <Route path='/login-form' element={<LoginForm />} />
-      <Route path='/signup' element={<Signup />} />
       <Route path='/about' element={<About />} />
       <Route path='/contact' element={<Contact />} />
       <Route path='/my-profile' element={<MyProfile />} />
