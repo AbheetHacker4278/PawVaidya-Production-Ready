@@ -5,7 +5,7 @@ import ReleatedDoctors from '../components/ReleatedDoctors';
 import { AppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import { Stethoscope, Calendar, CheckCircle } from 'lucide-react';
+import { Stethoscope, Calendar, CheckCircle, Clock, ArrowRight, X } from 'lucide-react';
 
 const Appointments = () => {
   const { docId } = useParams();
@@ -20,11 +20,17 @@ const Appointments = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [validationError, setValidationError] = useState('');
+  const [hasActiveAppointment, setHasActiveAppointment] = useState(false);
+  const [activeAppointmentInfo, setActiveAppointmentInfo] = useState(null);
 
   const loadingMessages = [
     "Checking Available Slots...",
     "We are confirming Your Booking...",
-    "Booking is Confirmed!"
+    "Booking is Confirmed!",
+    // New messages for cancellation
+    "Processing Cancellation Request...",
+    "Updating Appointment Records...",
+    "Appointment Successfully Cancelled!"
   ];
 
   const LoadingState = ({ step }) => {
@@ -42,7 +48,7 @@ const Appointments = () => {
               {icons[step]}
             </div>
             <div className="relative w-64 h-2 bg-gray-200 rounded-full mb-4">
-              <div 
+              <div
                 className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-500"
                 style={{ width: `${(step + 1) * 33.33}%` }}
               />
@@ -56,12 +62,73 @@ const Appointments = () => {
     );
   };
 
+  const CancellationLoadingState = ({ step }) => {
+    const icons = [
+      <X className="w-12 h-12 text-red-500 animate-pulse" />,
+      <Calendar className="w-12 h-12 text-red-500 animate-bounce" />,
+      <CheckCircle className="w-12 h-12 text-green-500 animate-ping" />
+    ];
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-8 rounded-lg max-w-md w-full mx-4">
+          <div className="flex flex-col items-center">
+            <div className="mb-4">
+              {icons[step]}
+            </div>
+            <div className="relative w-64 h-2 bg-gray-200 rounded-full mb-4">
+              <div
+                className="absolute top-0 left-0 h-full bg-red-500 rounded-full transition-all duration-500"
+                style={{ width: `${(step + 1) * 33.33}%` }}
+              />
+            </div>
+            <p className="text-lg font-medium text-gray-800 text-center">
+              {loadingMessages[step + 3]}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  // Check if user has any active appointments
+  const checkActiveAppointments = async () => {
+    if (!token) return;
+
+    try {
+      const { data } = await axios.get(backendurl + '/api/user/appointments', { headers: { token } });
+
+      if (data.success) {
+        // Check if there are any active appointments (not cancelled and not completed)
+        const activeAppointments = data.appointments.filter(
+          appointment => !appointment.cancelled && !appointment.isCompleted
+        );
+
+        if (activeAppointments.length > 0) {
+          setHasActiveAppointment(true);
+          setActiveAppointmentInfo(activeAppointments[0]);
+        } else {
+          setHasActiveAppointment(false);
+          setActiveAppointmentInfo(null);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const fetchDocInfo = async () => {
     const docInfo = doctors.find(doc => doc._id === docId);
     setDocInfo(docInfo);
   };
 
   const getAvailableSlots = () => {
+    // If user has an active appointment, don't show any slots
+    if (hasActiveAppointment) {
+      setDocSlots([]);
+      return;
+    }
+
     setDocSlots([]);
     const today = new Date();
 
@@ -113,6 +180,12 @@ const Appointments = () => {
   };
 
   const validateBooking = () => {
+    if (hasActiveAppointment) {
+      setValidationError('You already have an active appointment. Please complete or cancel it before booking a new one.');
+      toast.warn('You already have an active appointment. Please complete or cancel it before booking a new one.');
+      return false;
+    }
+
     if (!docSlots[slotIndex]?.[0]?.datetime) {
       setValidationError('Please select an appointment date');
       toast.warn('Please select an appointment date');
@@ -153,7 +226,7 @@ const Appointments = () => {
 
       setLoadingStep(0);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       setLoadingStep(1);
       await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -182,22 +255,69 @@ const Appointments = () => {
     }
   };
 
+  const cancelAppointment = async () => {
+    if (!activeAppointmentInfo) return;
+
+    setIsLoading(true);
+    try {
+      // Set first cancellation loading step
+      setLoadingStep(0);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Set second cancellation loading step
+      setLoadingStep(1);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const { data } = await axios.post(
+        backendurl + '/api/user/cancel-appointment',
+        { appointmentId: activeAppointmentInfo._id },
+        { headers: { token } }
+      );
+
+      // Set final cancellation loading step
+      setLoadingStep(2);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      if (data.success) {
+        toast.success('Appointment cancelled successfully');
+        setHasActiveAppointment(false);
+        setActiveAppointmentInfo(null);
+        getdoctorsdata();
+        // Refresh available slots after cancellation
+        getAvailableSlots();
+      } else {
+        toast.error(data.message || 'Failed to cancel appointment');
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.response?.data?.message || 'Error cancelling appointment');
+    } finally {
+      setIsLoading(false);
+      setLoadingStep(0);
+    }
+  };
+
   useEffect(() => {
     fetchDocInfo();
-  }, [doctors, docId]);
+    checkActiveAppointments();
+  }, [doctors, docId, token]);
 
   useEffect(() => {
     if (docInfo) {
       getAvailableSlots();
     }
-  }, [docInfo]);
+  }, [docInfo, hasActiveAppointment]);
 
   useEffect(() => {
     setValidationError('');
   }, [slotIndex, slotTime]);
 
   if (isLoading) {
-    return <LoadingState step={loadingStep} />;
+    if (activeAppointmentInfo) {
+      return <CancellationLoadingState step={loadingStep} />;
+    } else {
+      return <LoadingState step={loadingStep} />;
+    }
   }
 
   return docInfo && (
@@ -247,59 +367,111 @@ const Appointments = () => {
 
       <div className="sm:ml-72 sm:pl-4 mt-4 font-medium text-gray-700">
         <p>Booking Slots</p>
-        <div className="flex gap-3 items-center w-full overflow-x-scroll mt-4">
-          {docSlots.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => setSlotIndex(index)}
-              className={`text-center py-6 min-w-16 rounded-full cursor-pointer hover:border-red-400  ${
-                slotIndex === index ? 'bg-red-400 text-white' : 'border border-gray-200'
-              }`}
-            >
-              <p>{item[0]?.datetime ? daysofWeek[item[0].datetime.getDay()] : 'N/A'}</p>
-              <p>{item[0]?.datetime ? item[0].datetime.getDate() : 'N/A'}</p>
+
+        {hasActiveAppointment ? (
+          <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg transform transition-all duration-500 hover:shadow-lg animate-fadeIn">
+            <div className="flex items-center">
+              <Calendar className="w-6 h-6 text-yellow-600 mr-2 animate-pulse" />
+              <p className="text-yellow-800 font-medium">You already have an active appointment</p>
             </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3 w-full overflow-x-scroll mt-4">
-          {docSlots.length &&
-            docSlots[slotIndex]
-              ?.filter((item) => item)
-              .map((item, index) => (
-                <p
-                  key={index}
-                  onClick={() => setSlotTime(item.time)}
-                  className={`text-sm font-light flex-shrink-0 px-5 py-2 rounded-full cursor-pointer hover:bg-[#5A4035] hover:text-white ${
-                    item.time === slotTime
-                      ? 'bg-[#5A4035] text-white'
-                      : 'text-gray-400 border border-[#5A4035]'
-                  }`}
-                >
-                  {item.time.toLowerCase()}
+            <p className="text-yellow-700 mt-2 transition-all duration-300 animate-slideIn">
+              Please complete or cancel your current appointment before booking a new one.
+            </p>
+            {activeAppointmentInfo && (
+              <div className="mt-3 bg-white p-3 rounded-md shadow-md transition-all duration-500 transform hover:scale-[1.02] animate-fadeInUp">
+                <p className="font-medium flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                  Current Appointment Details:
                 </p>
-              ))}
-        </div>
+                <div className="mt-2 space-y-2 animate-slideInRight">
+                  <p className="flex items-center transition-all duration-300 hover:translate-x-1">
+                    <Stethoscope className="w-4 h-4 text-primary mr-2" />
+                    Doctor: {activeAppointmentInfo.docData.name}
+                  </p>
+                  <p className="flex items-center transition-all duration-300 hover:translate-x-1">
+                    <Calendar className="w-4 h-4 text-primary mr-2" />
+                    Date: {activeAppointmentInfo.slotDate && activeAppointmentInfo.slotDate.split('_').join(' / ')}
+                  </p>
+                  <p className="flex items-center transition-all duration-300 hover:translate-x-1">
+                    <Clock className="w-4 h-4 text-primary mr-2" />
+                    Time: {activeAppointmentInfo.slotTime}
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => navigate('/my-appointments')}
+                className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center justify-center group"
+              >
+                <Calendar className="w-5 h-5 mr-2 transition-transform duration-300 group-hover:rotate-12" />
+                Go to My Appointments
+                <ArrowRight className="w-5 h-5 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+              </button>
 
-        <div className="flex flex-col items-start">
-          <button
-            onClick={bookappointment}
-            className={`text-white font-medium text-sm  px-10 py-3 rounded-full my-6 ${
-              !slotTime || !docSlots[slotIndex]?.[0]?.datetime
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-800 cursor-pointer'
-            }`}
-            disabled={!slotTime || !docSlots[slotIndex]?.[0]?.datetime}
-          >
-            Book an Appointment
-          </button>
-          
-          {validationError && (
-            <p className="text-sm text-red-500 ml-2 -mt-4 mb-4">{validationError}</p>
-          )}
-        </div>
+              <button
+                onClick={cancelAppointment}
+                className="mt-3 sm:mt-0 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center justify-center group"
+              >
+                <X className="w-5 h-5 mr-2 transition-transform duration-300 group-hover:rotate-90" />
+                Cancel Appointment
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-3 items-center w-full overflow-x-scroll mt-4">
+              {docSlots.map((item, index) => (
+                <div
+                  key={index}
+                  onClick={() => setSlotIndex(index)}
+                  className={`text-center py-6 min-w-16 rounded-full cursor-pointer hover:border-red-400  ${slotIndex === index ? 'bg-red-400 text-white' : 'border border-gray-200'
+                    }`}
+                >
+                  <p>{item[0]?.datetime ? daysofWeek[item[0].datetime.getDay()] : 'N/A'}</p>
+                  <p>{item[0]?.datetime ? item[0].datetime.getDate() : 'N/A'}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 w-full overflow-x-scroll mt-4">
+              {docSlots.length &&
+                docSlots[slotIndex]
+                  ?.filter((item) => item)
+                  .map((item, index) => (
+                    <p
+                      key={index}
+                      onClick={() => setSlotTime(item.time)}
+                      className={`text-sm font-light flex-shrink-0 px-5 py-2 rounded-full cursor-pointer hover:bg-[#5A4035] hover:text-white ${item.time === slotTime
+                        ? 'bg-[#5A4035] text-white'
+                        : 'text-gray-400 border border-[#5A4035]'
+                        }`}
+                    >
+                      {item.time.toLowerCase()}
+                    </p>
+                  ))}
+            </div>
+
+            <div className="flex flex-col items-start">
+              <button
+                onClick={bookappointment}
+                className={`text-white font-medium text-sm  px-10 py-3 rounded-full my-6 ${!slotTime || !docSlots[slotIndex]?.[0]?.datetime
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-800 cursor-pointer'
+                  }`}
+                disabled={!slotTime || !docSlots[slotIndex]?.[0]?.datetime}
+              >
+                Book an Appointment
+              </button>
+
+              {validationError && (
+                <p className="text-sm text-red-500 ml-2 -mt-4 mb-4">{validationError}</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
-      
+
       <ReleatedDoctors
         docId={docId}
         speciality={docInfo.speciality}
