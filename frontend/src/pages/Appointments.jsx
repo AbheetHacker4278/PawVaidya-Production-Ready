@@ -5,7 +5,7 @@ import ReleatedDoctors from '../components/ReleatedDoctors';
 import { AppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import { Stethoscope, Calendar, CheckCircle, Clock, ArrowRight, X } from 'lucide-react';
+import { Stethoscope, Calendar, CheckCircle, Clock, ArrowRight, X, Loader } from 'lucide-react';
 
 const Appointments = () => {
   const { docId } = useParams();
@@ -22,6 +22,7 @@ const Appointments = () => {
   const [validationError, setValidationError] = useState('');
   const [hasActiveAppointment, setHasActiveAppointment] = useState(false);
   const [activeAppointmentInfo, setActiveAppointmentInfo] = useState(null);
+  const [loadingActiveAppointment, setLoadingActiveAppointment] = useState(false);
 
   const loadingMessages = [
     "Checking Available Slots...",
@@ -42,7 +43,7 @@ const Appointments = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-8 rounded-lg max-w-md w-full mx-4">
+        <div className="bg-yellow-100 p-8 rounded-lg max-w-md w-full mx-4">
           <div className="flex flex-col items-center">
             <div className="mb-4">
               {icons[step]}
@@ -90,11 +91,31 @@ const Appointments = () => {
     );
   };
 
+  const ActiveAppointmentLoadingState = () => {
+    return (
+      <div className="mt-4 p-6 bg-gray-100 border border-gray-200 rounded-lg animate-pulse">
+        <div className="flex items-center space-x-2">
+          <Loader className="w-6 h-6 text-primary animate-spin" />
+          <div className="h-4 bg-gray-300 rounded w-48"></div>
+        </div>
+        <div className="mt-4 space-y-3">
+          <div className="h-3 bg-gray-300 rounded w-full"></div>
+          <div className="h-3 bg-gray-300 rounded w-5/6"></div>
+          <div className="h-3 bg-gray-300 rounded w-4/6"></div>
+        </div>
+        <div className="mt-4 flex gap-3">
+          <div className="h-10 bg-gray-300 rounded w-40"></div>
+          <div className="h-10 bg-gray-300 rounded w-40"></div>
+        </div>
+      </div>
+    );
+  };
 
   // Check if user has any active appointments
   const checkActiveAppointments = async () => {
     if (!token) return;
 
+    setLoadingActiveAppointment(true);
     try {
       const { data } = await axios.get(backendurl + '/api/user/appointments', { headers: { token } });
 
@@ -114,6 +135,8 @@ const Appointments = () => {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoadingActiveAppointment(false);
     }
   };
 
@@ -368,7 +391,9 @@ const Appointments = () => {
       <div className="sm:ml-72 sm:pl-4 mt-4 font-medium text-gray-700">
         <p>Booking Slots</p>
 
-        {hasActiveAppointment ? (
+        {loadingActiveAppointment ? (
+          <ActiveAppointmentLoadingState />
+        ) : hasActiveAppointment ? (
           <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg transform transition-all duration-500 hover:shadow-lg animate-fadeIn">
             <div className="flex items-center">
               <Calendar className="w-6 h-6 text-yellow-600 mr-2 animate-pulse" />
