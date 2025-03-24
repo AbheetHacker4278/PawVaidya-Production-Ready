@@ -96,6 +96,55 @@ export const addDoctor = async (req, res) => {
     }
 };
 
+
+// API to delete a doctor
+export const deleteDoctor = async (req, res) => {
+    try {
+        const { doctorId } = req.params;
+        
+        // Check if doctor exists
+        const doctor = await doctorModel.findById(doctorId);
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor not found"
+            });
+        }
+
+        // Check for associated appointments
+        const doctorAppointments = await appointmentModel.find({ docId: doctorId });
+        
+        // Delete associated appointments
+        if (doctorAppointments.length > 0) {
+            await appointmentModel.deleteMany({ docId: doctorId });
+        }
+
+        // Delete the doctor's image from Cloudinary if exists
+        if (doctor.image && doctor.image.includes('cloudinary')) {
+            const publicId = doctor.image.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(publicId);
+        }
+
+        // Delete the doctor
+        await doctorModel.findByIdAndDelete(doctorId);
+        
+        res.json({
+            success: true,
+            message: "Doctor deleted successfully"
+        });
+    } catch (error) {
+        console.error("Error deleting doctor:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete doctor",
+            error: error.message
+        });
+    }
+};
+
+
+
+
 // API for admin login
 export const loginAdmin = async (req, res) => {
     try {
@@ -147,6 +196,112 @@ export const allUsers = async (req , res) => {
         });
     }
 }  
+
+// API to delete a user
+export const deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Check if user exists
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Check for associated appointments
+        const userAppointments = await appointmentModel.find({ userId });
+        
+        // Delete associated appointments
+        if (userAppointments.length > 0) {
+            await appointmentModel.deleteMany({ userId });
+        }
+
+        // Delete the user
+        await userModel.findByIdAndDelete(userId);
+        
+        res.json({
+            success: true,
+            message: "User deleted successfully"
+        });
+    } catch (error) {
+        console.error("Error deleting user:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete user",
+            error: error.message
+        });
+    }
+};
+
+// API to edit a user
+export const editUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const updateData = req.body;
+        
+        // Check if user exists
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Validate email if it's being updated
+        if (updateData.email && !validator.isEmail(updateData.email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email format"
+            });
+        }
+
+        // Handle password update if provided
+        if (updateData.password) {
+            // Validate password strength
+            if (updateData.password.length < 8) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Password must be at least 8 characters long"
+                });
+            }
+
+            // Hash the new password
+            const salt = await bcryptjs.genSalt(10);
+            updateData.password = await argon2.hash(updateData.password, salt);
+        }
+
+        // Handle image upload if provide
+        if (req.file) {
+            const imageUpload = await cloudinary.uploader.upload(req.file.path, { resource_type: 'image' });
+            updateData.image = imageUpload.secure_url;
+        }
+
+        // Update user in database
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true }
+        ).select('-password -resetOtpExpireAt -verifyOtpExpiredAt -verifyOtpVerified -verifyOtp -resetOtp');
+        
+        res.json({
+            success: true,
+            message: "User updated successfully",
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error("Error updating user:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Failed to update user",
+            error: error.message
+        });
+    }
+};
+
 
 // API to get dashboard data for admin panel
 export const appointmenetsAdmin = async (req, res) => {
