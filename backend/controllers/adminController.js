@@ -10,11 +10,11 @@ import userModel from '../models/userModel.js';
 // API for adding a doctor
 export const addDoctor = async (req, res) => {
     try {
-        const { name, email, password, speciality, degree, experience, about, fees, address, full_address } = req.body;
+        const { name, email, password, speciality, degree, experience, about, fees, docphone , address, full_address } = req.body;
         const imageFile = req.file;
 
         // Validate required fields
-        if (!name || !email || !password || !speciality || !degree || !experience || !about || !fees || !address || !full_address) {
+        if (!name || !email || !password || !speciality || !degree || !experience || !about || !fees || !docphone || !address || !full_address) {
             return res.json({
                 success: false,
                 message: "Missing required Fields",
@@ -56,6 +56,7 @@ export const addDoctor = async (req, res) => {
             experience,
             about,
             fees,
+            docphone,
             address: JSON.parse(address),
             full_address,
             date: Date.now(),
@@ -78,6 +79,7 @@ export const addDoctor = async (req, res) => {
                 experience,
                 about,
                 fees,
+                docphone,
                 address,
                 full_address,
             },
