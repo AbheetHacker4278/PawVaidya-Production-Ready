@@ -80,10 +80,20 @@ export const registeruser = async (req, res) => {
         }
         await transporter.sendMail(mailOptions);
 
+        // Store user data in localStorage for fast retrieval
+        const userResponseData = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            state: user.state,
+            district: user.district,
+            isAccountverified: user.isAccountverified || false
+        }
+
         res.json({
             success: true,
             token,
-            userdata
+            userdata: userResponseData
         })
 
     } catch (error) {
@@ -93,7 +103,6 @@ export const registeruser = async (req, res) => {
         })
     }
 }
-
 
 export const loginUser = async (req, res) => {
     try {
@@ -117,9 +126,21 @@ export const loginUser = async (req, res) => {
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
                 maxAge: 7 * 24 * 60 * 1000
             })
+
+            // Store user data in localStorage for fast retrieval
+            const userResponseData = {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                state: user.state,
+                district: user.district,
+                isAccountverified: user.isAccountverified || false
+            }
+
             res.json({
                 success: true,
-                token
+                token,
+                userdata: userResponseData
             })
         }
         else {
@@ -142,7 +163,6 @@ export const logout = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-            // maxAge : 7 * 24 * 60 * 1000
         })
         return res.json({
             success: true,
@@ -216,9 +236,21 @@ export const verifyEmail = async (req, res) => {
         user.verifyOtpExpiredAt = 0;
 
         await user.save()
+        
+        // Update localStorage with verified status
+        const userResponseData = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            state: user.state,
+            district: user.district,
+            isAccountverified: true
+        }
+
         res.json({
             success: true,
-            message: "Email Verified Successfully"
+            message: "Email Verified Successfully",
+            userdata: userResponseData
         })
     } catch (error) {
         return res.json({
@@ -244,7 +276,7 @@ export const sendResetOtp = async (req, res) => {
 
     if (!email) {
         return res.json({
-            success: false, // Change this to `false`
+            success: false,
             message: "Email is required"
         });
     }
@@ -272,7 +304,7 @@ export const sendResetOtp = async (req, res) => {
             subject: 'Password Reset OTP',
             html: PASSWORD_RESET_REQUEST_TEMPLATE
                 .replace('{otp}', otp)
-                .replace('{name}', user.name || 'User') // Default to 'User' if name is missing
+                .replace('{name}', user.name || 'User')
         };
         await transporter.sendMail(mailOptions);
 
@@ -346,18 +378,35 @@ export const resetpassword = async (req, res) => {
     }
 }
 
-//Api for user profile data
-
 export const getprofile = async (req, res) => {
     try {
         const { userId } = req.body
         const userdata = await userModel.findById(userId).select('-password')
 
+        // Prepare user data for localStorage
+        const userResponseData = {
+            id: userdata._id,
+            name: userdata.name,
+            email: userdata.email,
+            gender: userdata.gender,
+            dob: userdata.dob,
+            address: userdata.address,
+            phone: userdata.phone,
+            full_address: userdata.full_address,
+            pet_type: userdata.pet_type,
+            pet_age: userdata.pet_age,
+            pet_gender: userdata.pet_gender,
+            breed: userdata.breed,
+            category: userdata.category,
+            image: userdata.image,
+            isAccountverified: userdata.isAccountverified
+        }
+
         res.json({
             success: true,
-            userdata
+            userdata: userResponseData
         })
-    } catch {
+    } catch (error) {
         res.json({
             success: false,
             message: error.message
@@ -370,23 +419,62 @@ export const updateprofile = async (req, res) => {
         const { userId, name, email, gender, dob, address, phone, full_address, pet_type, pet_age, pet_gender, breed, category } = req.body
         const imagefile = req.file
 
-        if (!name || !email || !gender || !dob || !address || !phone || !full_address || !pet_type || !pet_age || !pet_gender, !breed, !category) {
+        if (!name || !email || !gender || !dob || !address || !phone || !full_address || !pet_type || !pet_age || !pet_gender || !breed || !category) {
             return res.json({
                 success: false,
                 message: "Data Missing"
             })
         }
-        await userModel.findByIdAndUpdate(userId, { name, email, gender, dob, address: JSON.parse(address.toUpperCase()), phone, full_address, pet_type, pet_age, pet_gender, breed, category })
-
+        
+        let imageurl;
         if (imagefile) {
             const imageupload = await coludinary.uploader.upload(imagefile.path, { resource_type: 'image' })
-            const imageurl = imageupload.secure_url
-
-            await userModel.findByIdAndUpdate(userId, { image: imageurl })
+            imageurl = imageupload.secure_url
         }
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId, 
+            { 
+                name, 
+                email, 
+                gender, 
+                dob, 
+                address: JSON.parse(address.toUpperCase()), 
+                phone, 
+                full_address, 
+                pet_type, 
+                pet_age, 
+                pet_gender, 
+                breed, 
+                category,
+                ...(imageurl && { image: imageurl })
+            },
+            { new: true }
+        ).select('-password');
+
+        // Prepare updated user data for localStorage
+        const userResponseData = {
+            id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            gender: updatedUser.gender,
+            dob: updatedUser.dob,
+            address: updatedUser.address,
+            phone: updatedUser.phone,
+            full_address: updatedUser.full_address,
+            pet_type: updatedUser.pet_type,
+            pet_age: updatedUser.pet_age,
+            pet_gender: updatedUser.pet_gender,
+            breed: updatedUser.breed,
+            category: updatedUser.category,
+            image: updatedUser.image,
+            isAccountverified: updatedUser.isAccountverified
+        }
+
         res.json({
             success: true,
-            message: 'Profile updated successfully'
+            message: 'Profile updated successfully',
+            userdata: userResponseData
         })
     } catch (error) {
         res.json({
@@ -396,8 +484,6 @@ export const updateprofile = async (req, res) => {
     }
 }
 
-
-//api for appointment
 export const bookappointment = async (req, res) => {
     try {
         const { userId, docId, slotDate, slotTime } = req.body;
@@ -441,10 +527,9 @@ export const bookappointment = async (req, res) => {
             date: new Date()
         };
 
-        // Save appointmen
+        // Save appointment
         const newAppointment = new appointmentModel(appointmentData);
         await newAppointment.save();
-
 
         // Send confirmation email
         const mailOptions = {
@@ -559,7 +644,11 @@ export const bookappointment = async (req, res) => {
         // Update doctor's booked slots
         await doctorModel.findByIdAndUpdate(docId, { slots_booked });
 
-        res.status(200).json({ success: true, message: 'Appointment booked successfully' });
+        res.status(200).json({ 
+            success: true, 
+            message: 'Appointment booked successfully',
+            appointmentData: newAppointment 
+        });
 
     } catch (error) {
         console.error(error);
@@ -567,14 +656,10 @@ export const bookappointment = async (req, res) => {
     }
 };
 
-
-// API to get user appointments for frontend my-appointments page
 export const listAppointment = async (req, res) => {
     try {
-
         const { userId } = req.body
         const appointments = await appointmentModel.find({ userId })
-
 
         res.json({ success: true, appointments })
 
@@ -584,7 +669,6 @@ export const listAppointment = async (req, res) => {
     }
 }
 
-//APi for cancle appointment
 export const cancelAppointment = async (req, res) => {
     try {
         const { userId, appointmentId } = req.body;
@@ -767,7 +851,4 @@ export const getuserdata = async (req, res) => {
     }
 }
 
-
-
-
-export default registeruser 
+export default registeruser

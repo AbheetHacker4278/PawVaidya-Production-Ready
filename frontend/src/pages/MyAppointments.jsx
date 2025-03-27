@@ -9,6 +9,7 @@ const MyAppointments = () => {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
   const months = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -17,14 +18,41 @@ const MyAppointments = () => {
     return dateArray[0] + " " + months[Number(dateArray[1])] + " " + dateArray[2]
   }
 
+  // Parse appointment date and time
+  const parseAppointmentDateTime = (slotDate, slotTime) => {
+    const [day, month, year] = slotDate.split('_');
+    const [time, period] = slotTime.split(' ');
+    let [hours, minutes] = time.split(':');
+    
+    // Convert to 24-hour format
+    if (period === 'PM' && hours !== '12') {
+      hours = String(Number(hours) + 12);
+    }
+    if (period === 'AM' && hours === '12') {
+      hours = '00';
+    }
+
+    return new Date(year, month - 1, day, hours, minutes);
+  }
+
   // Getting User Appointments Data Using API
   const getUserAppointments = async () => {
     try {
       setIsLoading(true)
       const { data } = await axios.get(backendurl + '/api/user/appointments', { headers: { token } })
       if (data.success) {
-        setAppointments(data.appointments.reverse())
-        console.log(data.appointments)
+        // Check and auto-cancel expired appointments
+        const processedAppointments = data.appointments.map(appointment => {
+          const appointmentDateTime = parseAppointmentDateTime(appointment.slotDate, appointment.slotTime);
+          if (appointmentDateTime < currentTime && !appointment.cancelled && !appointment.isCompleted) {
+            // Automatically cancel the appointment
+            cancelAppointment(appointment._id);
+            return { ...appointment, cancelled: true };
+          }
+          return appointment;
+        });
+
+        setAppointments(processedAppointments.reverse())
       }
     } catch (error) {
       console.log(error)
@@ -34,19 +62,32 @@ const MyAppointments = () => {
     }
   }
 
+  // Timer to check appointment status
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Check every minute
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Trigger appointment check when token or current time changes
   useEffect(() => {
     if (token) {
       getUserAppointments()
     }
-  }, [token])
+  }, [token, currentTime])
 
   // Function to cancel appointment Using API
   const cancelAppointment = async (appointmentId) => {
-    console.log(appointmentId)
     try {
-      const { data } = await axios.post(backendurl + '/api/user/cancel-appointment', { appointmentId }, { headers: { token } })
+      const { data } = await axios.post(
+        backendurl + '/api/user/cancel-appointment', 
+        { appointmentId }, 
+        { headers: { token } }
+      )
       if (data.success) {
-        toast.success(data.message)
+        toast.error(`Appointment automatically cancelled due to time expiration.`)
         getUserAppointments()
       } else {
         toast.error(data.message)
@@ -55,6 +96,24 @@ const MyAppointments = () => {
     } catch (error) {
       console.log(error)
       toast.error(error.message)
+    }
+  }
+
+  // Calculate time remaining or time passed
+  const getAppointmentStatus = (slotDate, slotTime) => {
+    const appointmentDateTime = parseAppointmentDateTime(slotDate, slotTime);
+    const timeDiff = appointmentDateTime.getTime() - currentTime.getTime();
+    
+    if (timeDiff > 0) {
+      // Appointment is in the future
+      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      return `Starts in ${hours}h ${minutes}m`;
+    } else {
+      // Appointment is in the past
+      const hours = Math.abs(Math.floor(timeDiff / (1000 * 60 * 60)));
+      const minutes = Math.abs(Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)));
+      return `Expired ${hours}h ${minutes}m ago`;
     }
   }
 
@@ -68,10 +127,13 @@ const MyAppointments = () => {
 
   return (
     <div className=''>
-      <p className='pb-13 mt-12  font-medium text-zinc-700 border-b'>My Appointments</p>
+      <p className='pb-13 mt-12 font-medium text-zinc-700 border-b'>My Appointments</p>
       <div>
         {appointments.map((item, index) => (
-          <div className='m-2 rounded-xl border border-[#5A4035] grid grid-col-[1fr_2fr] gap-4 sm:flex sm:gap-6 py-2 border-b ' key={index}>
+          <div 
+            className='m-2 rounded-xl border border-[#5A4035] grid grid-col-[1fr_2fr] gap-4 sm:flex sm:gap-6 py-2 border-b ' 
+            key={index}
+          >
             <div className='ml-2'>
               <img className='w-32 bg-indigo-50' src={item.docData.image} alt="" />
             </div>
@@ -81,11 +143,22 @@ const MyAppointments = () => {
               <div className='flex flex-row'>
                 <p className='text-zinc-700 font-medium mt-1'>Full Address:  <span className='text-zinc-500 text-sm'>{item.docData.full_address}</span></p>
               </div>
-              <p className='text-sm mt-1'><span className='text-sm text-neutral-700 font-medium'>Date & Time:</span>{slotDateFormat(item.slotDate)} | {item.slotTime}</p>
+              <p className='text-sm mt-1'>
+                <span className='text-sm text-neutral-700 font-medium'>Date & Time:</span>
+                {slotDateFormat(item.slotDate)} | {item.slotTime}
+              </p>
+              <p className='text-sm mt-1 text-red-500'>
+                <span className='text-sm text-neutral-700 font-medium'>Status: </span>
+                {getAppointmentStatus(item.slotDate, item.slotTime)}
+              </p>
               <p className='text-sm mt-1'><span className='text-sm text-neutral-700 font-medium'>Phone Number:</span> +91 {item.docData.docphone}</p>
               <div className='flex gap-4 pt-3'>
-                <p className='text-sm text-white text-center sm:min-w-48 py-2 border px-3  rounded-full bg-[#5A4035] hover:bg-[#422f27] hover:text-white cursor-pointer transition-all duration-300'>{item.docData.address.Location}</p>
-                <p className='text-sm text-white text-center sm:min-w-48 py-2 border px-3  rounded-full bg-[#5A4035] hover:bg-[#422f27] hover:text-white cursor-pointer transition-all duration-300'>{item.docData.address.line}</p>
+                <p className='text-sm text-white text-center sm:min-w-48 py-2 border px-3 rounded-full bg-[#5A4035] hover:bg-[#422f27] hover:text-white cursor-pointer transition-all duration-300'>
+                  {item.docData.address.Location}
+                </p>
+                <p className='text-sm text-white text-center sm:min-w-48 py-2 border px-3 rounded-full bg-[#5A4035] hover:bg-[#422f27] hover:text-white cursor-pointer transition-all duration-300'>
+                  {item.docData.address.line}
+                </p>
               </div>
             </div>
             <div></div>
@@ -100,13 +173,12 @@ const MyAppointments = () => {
                 </button>
               ) : (
                 <>
-                  
                   <button className="text-sm mb-2 mt-2 mr-4 text-stone-500 text-center sm:min-w-48 py-2 border border-[#5A4035] rounded hover:bg-[#422f27] hover:text-white transition-all duration-300">
                     Pay Online
                   </button>
                   <button
                     onClick={() => cancelAppointment(item._id)}
-                    className=" mb-2 mt-2 mr-4 text-sm text-stone-500 text-center sm:min-w-48 py-2 border border-red-500 rounded hover:bg-red-400 hover:text-white transition-all duration-300"
+                    className="mb-2 mt-2 mr-4 text-sm text-stone-500 text-center sm:min-w-48 py-2 border border-red-500 rounded hover:bg-red-400 hover:text-white transition-all duration-300"
                   >
                     Cancel Appointment
                   </button>
@@ -123,7 +195,7 @@ const MyAppointments = () => {
                     }}
                     className="flex items-center mb-2 mt-2 mr-4 gap-2 text-sm text-stone-500 text-center sm:min-w-48 py-2 border border-emerald-400 rounded hover:bg-green-600 hover:text-white transition-all duration-300"
                   >
-                    <div className="flex justify-center items-center text-center gap-2 pl-36  md:flex md:justify-center md:items-center md:text-center md:gap-2 md:pl-14 ">
+                    <div className="flex justify-center items-center text-center gap-2 pl-36 md:flex md:justify-center md:items-center md:text-center md:gap-2 md:pl-14">
                       <span>Quick Chat</span>
                       <img
                         className="w-5 h-5"
@@ -133,7 +205,6 @@ const MyAppointments = () => {
                     </div>
                   </button> 
                 </>
-                
               )}
             </div>
           </div>
