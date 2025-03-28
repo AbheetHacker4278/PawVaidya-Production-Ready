@@ -419,23 +419,62 @@ export const updateprofile = async (req, res) => {
         const { userId, name, email, gender, dob, address, phone, full_address, pet_type, pet_age, pet_gender, breed, category } = req.body
         const imagefile = req.file
 
-        if (!name || !email || !gender || !dob || !address || !phone || !full_address || !pet_type || !pet_age || !pet_gender, !breed, !category) {
+        if (!name || !email || !gender || !dob || !address || !phone || !full_address || !pet_type || !pet_age || !pet_gender || !breed || !category) {
             return res.json({
                 success: false,
                 message: "Data Missing"
             })
         }
-        await userModel.findByIdAndUpdate(userId, { name, email, gender, dob, address: JSON.parse(address.toUpperCase()), phone, full_address, pet_type, pet_age, pet_gender, breed, category })
-
+        
+        let imageurl;
         if (imagefile) {
             const imageupload = await coludinary.uploader.upload(imagefile.path, { resource_type: 'image' })
-            const imageurl = imageupload.secure_url
-
-            await userModel.findByIdAndUpdate(userId, { image: imageurl })
+            imageurl = imageupload.secure_url
         }
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId, 
+            { 
+                name, 
+                email, 
+                gender, 
+                dob, 
+                address: JSON.parse(address.toUpperCase()), 
+                phone, 
+                full_address, 
+                pet_type, 
+                pet_age, 
+                pet_gender, 
+                breed, 
+                category,
+                ...(imageurl && { image: imageurl })
+            },
+            { new: true }
+        ).select('-password');
+
+        // Prepare updated user data for localStorage
+        const userResponseData = {
+            id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            gender: updatedUser.gender,
+            dob: updatedUser.dob,
+            address: updatedUser.address,
+            phone: updatedUser.phone,
+            full_address: updatedUser.full_address,
+            pet_type: updatedUser.pet_type,
+            pet_age: updatedUser.pet_age,
+            pet_gender: updatedUser.pet_gender,
+            breed: updatedUser.breed,
+            category: updatedUser.category,
+            image: updatedUser.image,
+            isAccountverified: updatedUser.isAccountverified
+        }
+
         res.json({
             success: true,
-            message: 'Profile updated successfully'
+            message: 'Profile updated successfully',
+            userdata: userResponseData
         })
     } catch (error) {
         res.json({
