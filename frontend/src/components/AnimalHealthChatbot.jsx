@@ -13,7 +13,7 @@ const AnimalHealthChatbot = () => {
   const chatEndRef = useRef(null);
 
   // Initialize Gemini AI
-  const apikey2 = import.meta.env.VITE_API_KEY_GEMINI_2;
+  const apikey2 = import.meta.env.VITE_API_KEY_GEMINI_2 || "AIzaSyC5pBG2gyh7jHTgL42EYSGTcPhwS_9NkV4";
   const genAI = new GoogleGenerativeAI(apikey2);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
