@@ -1,4 +1,5 @@
 import React from 'react'
+import AnimalHealthChatbot from '../components/AnimalHealthChatbot'
 
 const Contact = () => {
   return (
@@ -16,6 +17,9 @@ const Contact = () => {
           <p className='text-gray-500'>Learn more about our teams and job openings.</p>
           <button className='border border-green-600 px-8 py-4 text-sm hover:bg-[#489065] hover:text-white rounded-full'>Send Enquiry</button>
         </div>
+      </div>
+      <div className="relative">
+        <AnimalHealthChatbot />
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import AnimalHealthChatbot from '../components/AnimalHealthChatbot';
 
 const MyAppointments = () => {
   const { backendurl, token } = useContext(AppContext)
@@ -23,7 +24,7 @@ const MyAppointments = () => {
     const [day, month, year] = slotDate.split('_');
     const [time, period] = slotTime.split(' ');
     let [hours, minutes] = time.split(':');
-    
+
     // Convert to 24-hour format
     if (period === 'PM' && hours !== '12') {
       hours = String(Number(hours) + 12);
@@ -82,8 +83,8 @@ const MyAppointments = () => {
   const cancelAppointment = async (appointmentId) => {
     try {
       const { data } = await axios.post(
-        backendurl + '/api/user/cancel-appointment', 
-        { appointmentId }, 
+        backendurl + '/api/user/cancel-appointment',
+        { appointmentId },
         { headers: { token } }
       )
       if (data.success) {
@@ -103,7 +104,7 @@ const MyAppointments = () => {
   const getAppointmentStatus = (slotDate, slotTime) => {
     const appointmentDateTime = parseAppointmentDateTime(slotDate, slotTime);
     const timeDiff = appointmentDateTime.getTime() - currentTime.getTime();
-    
+
     if (timeDiff > 0) {
       // Appointment is in the future
       const hours = Math.floor(timeDiff / (1000 * 60 * 60));
@@ -130,8 +131,8 @@ const MyAppointments = () => {
       <p className='pb-13 mt-12 font-medium text-zinc-700 border-b'>My Appointments</p>
       <div>
         {appointments.map((item, index) => (
-          <div 
-            className='m-2 rounded-xl border border-[#5A4035] grid grid-col-[1fr_2fr] gap-4 sm:flex sm:gap-6 py-2 border-b ' 
+          <div
+            className='m-2 rounded-xl border border-[#5A4035] grid grid-col-[1fr_2fr] gap-4 sm:flex sm:gap-6 py-2 border-b '
             key={index}
           >
             <div className='ml-2'>
@@ -182,7 +183,7 @@ const MyAppointments = () => {
                   >
                     Cancel Appointment
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       let whatsappNumber = item.docData.docphone.replace(/\s+/g, '');
                       if (!whatsappNumber.startsWith('+91')) {
@@ -203,12 +204,15 @@ const MyAppointments = () => {
                         alt="WhatsApp icon"
                       />
                     </div>
-                  </button> 
+                  </button>
                 </>
               )}
             </div>
           </div>
         ))}
+      </div>
+      <div className="relative">
+        <AnimalHealthChatbot />
       </div>
     </div>
   )

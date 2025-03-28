@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
+import AnimalHealthChatbot from '../components/AnimalHealthChatbot';
 
 export const Doctors = () => {
   const { speciality } = useParams();
@@ -101,6 +102,9 @@ export const Doctors = () => {
             )}
           </div>
         </div>
+      </div>
+      <div className="relative">
+        <AnimalHealthChatbot />
       </div>
     </div>
   );

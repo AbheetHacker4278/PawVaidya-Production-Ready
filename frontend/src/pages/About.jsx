@@ -1,4 +1,5 @@
 import React from 'react'
+import AnimalHealthChatbot from '../components/AnimalHealthChatbot'
 
 const About = () => {
   return (
@@ -33,6 +34,9 @@ const About = () => {
           <b>Personalization</b>
           <p>Tailored recommendations and reminders to help you stay on top of your health.</p>
         </div>
+      </div>
+      <div className="relative">
+        <AnimalHealthChatbot />
       </div>
     </div>
   )
