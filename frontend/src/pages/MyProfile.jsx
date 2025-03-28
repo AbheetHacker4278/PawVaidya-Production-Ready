@@ -21,7 +21,7 @@ const MyProfile = () => {
   const updateUserProfileData = async () => {
     try {
       setIsSaving(true);
-
+      
       const formdata = new FormData();
       formdata.append('name', userdata.name);
       formdata.append('phone', userdata.phone);
@@ -152,7 +152,7 @@ const MyProfile = () => {
   // Loading overlay that appears when saving
   const LoadingOverlay = () => {
     if (!isSaving) return null;
-
+    
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
         <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
@@ -169,7 +169,7 @@ const MyProfile = () => {
       <div className="max-w-6xl mx-auto p-4 min-h-screen bg-[#F2E4C6]">
         {/* Loading Overlay */}
         <LoadingOverlay />
-
+        
         {/* Header Section */}
         <div className="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
           <div className="p-6 flex flex-col md:flex-row items-center md:items-start">
@@ -204,7 +204,7 @@ const MyProfile = () => {
                 </div>
               )}
             </div>
-
+            
             {/* Profile Info */}
             <div className="text-center md:text-left flex-1">
               {isEdit ? (
@@ -219,7 +219,7 @@ const MyProfile = () => {
               ) : (
                 <h1 className="text-2xl font-bold mb-2">{userdata.name}</h1>
               )}
-
+              
               <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mb-4">
                 <span className="bg-[#f8f3f1] text-[#9a6458] px-3 py-1 rounded-full flex items-center text-sm">
                   <Mail className="w-4 h-4 mr-1" /> {userdata.email}
@@ -231,10 +231,10 @@ const MyProfile = () => {
                   <MapPin className="w-4 h-4 mr-1" /> {userdata.address?.LOCATION}
                 </span>
               </div>
-
+              
               <SaveButton />
             </div>
-
+            
             {/* Daily Tip */}
             <div className="w-full md:w-1/3 mt-6 md:mt-0 md:ml-6 bg-[#f8f3f1] p-4 rounded-lg border-l-4 border-[#9a6458]">
               <div className="flex items-center mb-2">
@@ -245,7 +245,7 @@ const MyProfile = () => {
             </div>
           </div>
         </div>
-
+        
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Owner Information Card */}
@@ -268,14 +268,14 @@ const MyProfile = () => {
                   />
                 }
               />
-
+              
               <InfoItem
                 icon={Mail}
                 label="Email Address"
                 value={userdata.email}
                 editComponent={<p className="font-medium">{userdata.email}</p>}
               />
-
+              
               <InfoItem
                 icon={User}
                 label="Gender"
@@ -292,7 +292,7 @@ const MyProfile = () => {
                   </select>
                 }
               />
-
+              
               <InfoItem
                 icon={Calendar}
                 label="Date of Birth"
@@ -306,7 +306,7 @@ const MyProfile = () => {
                   />
                 }
               />
-
+              
               <InfoItem
                 icon={MapPin}
                 label="Address"
@@ -340,7 +340,7 @@ const MyProfile = () => {
                   </div>
                 }
               />
-
+              
               <InfoItem
                 icon={MapPin}
                 label="Full Address"
@@ -361,7 +361,7 @@ const MyProfile = () => {
               />
             </div>
           </div>
-
+          
           {/* Pet Information Card */}
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             <div className="p-4 bg-[#9a6458] text-white flex items-center">
@@ -389,7 +389,7 @@ const MyProfile = () => {
                   </select>
                 }
               />
-
+              
               <InfoItem
                 icon={PawPrint}
                 label="Pet Gender"
@@ -406,7 +406,7 @@ const MyProfile = () => {
                   </select>
                 }
               />
-
+              
               <InfoItem
                 icon={PawPrint}
                 label="Breed"
@@ -421,7 +421,7 @@ const MyProfile = () => {
                   />
                 }
               />
-
+              
               <InfoItem
                 icon={PawPrint}
                 label="Pet Category"
@@ -436,7 +436,7 @@ const MyProfile = () => {
                   />
                 }
               />
-
+              
               <InfoItem
                 icon={PawPrint}
                 label="Pet Age"
@@ -451,7 +451,7 @@ const MyProfile = () => {
                   />
                 }
               />
-
+              
               {/* Health Alert Card */}
               <div className="mt-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
                 <div className="flex items-start">
@@ -459,8 +459,8 @@ const MyProfile = () => {
                   <div>
                     <h4 className="font-medium text-red-700">Health Reminder</h4>
                     <p className="text-sm text-red-600">
-                      {userdata.pet_type === "Small Animal"
-                        ? "Next vaccination due in 30 days"
+                      {userdata.pet_type === "Small Animal" 
+                        ? "Next vaccination due in 30 days" 
                         : "Schedule a checkup for your pet"}
                     </p>
                   </div>
