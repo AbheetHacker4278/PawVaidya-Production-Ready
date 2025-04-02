@@ -40,9 +40,9 @@ const AnimalHealthChatbot = () => {
     setChatMessages([
       { 
         role: 'assistant', 
-        text: "Hi! I'm your Animal Health Assistant. Ask about your pet's health concerns, and I'll help you find the right care." 
+        text: `Hi! ${userdata?.name} Ask about your pet's health concerns, and I'll help you find the right care.` 
       }
-    ]);
+    ] , [userdata]);
 
     // Auto-hide initial popup after 5 seconds
     const popupTimer = setTimeout(() => {
@@ -286,7 +286,7 @@ const AnimalHealthChatbot = () => {
               <h3 className="text-lg font-semibold text-[#5A4035]">Welcome to PawVaidya!</h3>
             </div>
             <p className="text-zinc-600 mb-2">
-              I'm your AI veterinary assistant. I can help you with quick animal health queries and provide professional advice.
+              Hii {userdata?.name} I can help you with quick animal health queries and provide professional advice.
             </p>
             {getUserLocation() && (
               <div className="bg-[#f8f4e9] p-2 rounded-lg mb-3 flex items-center text-sm">
