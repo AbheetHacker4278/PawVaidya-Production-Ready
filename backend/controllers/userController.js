@@ -487,6 +487,7 @@ export const updateprofile = async (req, res) => {
 export const bookappointment = async (req, res) => {
     try {
         const { userId, docId, slotDate, slotTime } = req.body;
+        const meetLink = "https://meet.google.com/qfv-rcwa-sec";
 
         // Fetch doctor details
         const docData = await doctorModel.findById(docId).select("-password");
@@ -524,6 +525,7 @@ export const bookappointment = async (req, res) => {
             amount: docData.fees,
             slotTime,
             slotDate,
+            meetLink, // Add the meet link to the appointment data
             date: new Date()
         };
 
@@ -531,12 +533,8 @@ export const bookappointment = async (req, res) => {
         const newAppointment = new appointmentModel(appointmentData);
         await newAppointment.save();
 
-        // Send confirmation email
-        const mailOptions = {
-            from: process.env.SENDER_EMAIL,
-            to: userData.email,
-            subject: 'Appointment Confirmation',
-            html: `
+        // HTML template for appointment confirmation email
+        const appointmentConfirmationHTML = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -581,25 +579,30 @@ export const bookappointment = async (req, res) => {
             border-radius: 5px;
         }
 
-        .leaf {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            color: #4CAF50;
+        .meet-link {
+            background-color: #e1f5fe;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #039be5;
+            text-align: center;
         }
 
-        .butterfly {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            color: #8bc34a;
+        .meet-link a {
+            color: #0277bd;
+            font-weight: bold;
+            text-decoration: none;
         }
 
-        .paw {
-            position: absolute;
-            width: 25px;
-            height: 25px;
-            color: #66bb6a;
+        .meet-link a:hover {
+            text-decoration: underline;
+        }
+
+        .patient-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
         }
 
         .signature {
@@ -611,7 +614,7 @@ export const bookappointment = async (req, res) => {
 </head>
 <body>
     <div class="header">
-        <h2>Thanks For Booking your Appointment</h2>
+        <h2>Appointment Confirmation</h2>
     </div>
 
     <div class="content">
@@ -619,7 +622,7 @@ export const bookappointment = async (req, res) => {
 
         <p>Your appointment with <strong>Dr. ${docData.name}</strong> has been successfully booked.</p>
 
-        <p><strong>Details:</strong></p>
+        <p><strong>Appointment Details:</strong></p>
         <ul>
             <li><strong>Doctor:</strong> Dr. ${docData.name}</li>
             <li><strong>Date:</strong> ${slotDate}</li>
@@ -628,7 +631,14 @@ export const bookappointment = async (req, res) => {
             <li><strong>Full Address:</strong> ${docData.full_address}</li>
         </ul>
 
-        <p>Thank you for choosing our service. Please arrive on time.</p>
+        <div class="meet-link">
+            <p><strong>Virtual Consultation:</strong></p>
+            <p>Join your appointment through this Google Meet link:</p>
+            <p><a href="${meetLink}" target="_blank">${meetLink}</a></p>
+            <p>Please click the link at your scheduled time.</p>
+        </div>
+
+        <p>Thank you for choosing our service. Please arrive on time for in-person visits or join the virtual meeting link at the scheduled time.</p>
 
         <div class="signature">
             <p>Best regards,<br/>
@@ -636,10 +646,151 @@ export const bookappointment = async (req, res) => {
         </div>
     </div>
 </body>
-</html>
-            `
+</html>`;
+
+        // HTML template for doctor notification email
+        const doctorNotificationHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f9fff9;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+            margin: -20px -20px 20px -20px;
+        }
+
+        .content {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f8f0;
+            border-radius: 5px;
+        }
+
+        .meet-link {
+            background-color: #e1f5fe;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #039be5;
+            text-align: center;
+        }
+
+        .meet-link a {
+            color: #0277bd;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .meet-link a:hover {
+            text-decoration: underline;
+        }
+
+        .patient-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            border-left: 4px solid #9e9e9e;
+        }
+
+        .signature {
+            margin-top: 20px;
+            text-align: center;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>New Appointment Booked</h2>
+    </div>
+
+    <div class="content">
+        <p>Dear Dr. ${docData.name},</p>
+
+        <p>A new appointment has been booked for your services.</p>
+
+        <p><strong>Appointment Details:</strong></p>
+        <ul>
+            <li><strong>Date:</strong> ${slotDate}</li>
+            <li><strong>Time:</strong> ${slotTime}</li>
+            <li><strong>Fee:</strong> ₹${docData.fees}</li>
+        </ul>
+
+        <div class="patient-info">
+            <p><strong>Patient Information:</strong></p>
+            <ul>
+                <li><strong>Name:</strong> ${userData.name}</li>
+                <li><strong>Contact:</strong> ${userData.phone || 'Not provided'}</li>
+                <li><strong>Pet Type:</strong> ${userData.pet_type || 'Not provided'}</li>
+                <li><strong>Pet Breed:</strong> ${userData.breed || 'Not provided'}</li>
+                <li><strong>Pet Age:</strong> ${userData.pet_age || 'Not provided'}</li>
+                <li><strong>Pet Gender:</strong> ${userData.pet_gender || 'Not provided'}</li>
+            </ul>
+        </div>
+
+        <div class="meet-link">
+            <p><strong>Virtual Consultation:</strong></p>
+            <p>Join this appointment through this Google Meet link:</p>
+            <p><a href="${meetLink}" target="_blank">${meetLink}</a></p>
+            <p>Please click the link at the scheduled time.</p>
+        </div>
+
+        <p>Please ensure you're available for this appointment. If you need to cancel or reschedule, please do so through the doctor portal as soon as possible.</p>
+
+        <div class="signature">
+            <p>Best regards,<br/>
+            <strong>Pawvaidya Team</strong> 🐾</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        // Send confirmation email to the user
+        const userMailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: userData.email,
+            subject: 'Appointment Confirmation',
+            html: appointmentConfirmationHTML
         };
-        await transporter.sendMail(mailOptions);
+        await transporter.sendMail(userMailOptions);
+
+        // Send notification email to the doctor
+        const doctorMailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: docData.email, // Send to doctor's email
+            subject: 'New Appointment Booked',
+            html: doctorNotificationHTML
+        };
+        await transporter.sendMail(doctorMailOptions);
 
         // Update doctor's booked slots
         await doctorModel.findByIdAndUpdate(docId, { slots_booked });

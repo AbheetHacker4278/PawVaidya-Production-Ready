@@ -85,6 +85,7 @@ export const appointmentComplete = async (req, res) => {
     try {
         const { docId, appointmentId } = req.body;
         const appointmentData = await appointmentModel.findById(appointmentId);
+        const meetLink = appointmentData.meetLink || "https://meet.google.com/qfv-rcwa-sec";
         
         if (!appointmentData) {
             return res.json({ success: false, message: 'Appointment not found' });
@@ -151,6 +152,16 @@ export const appointmentComplete = async (req, res) => {
             border-radius: 5px;
         }
 
+        .meet-link {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #43a047;
+            text-align: center;
+            text-decoration: line-through;
+        }
+
         .signature {
             margin-top: 20px;
             text-align: center;
@@ -183,6 +194,12 @@ export const appointmentComplete = async (req, res) => {
             <li><strong>Time:</strong> ${appointmentData.slotTime}</li>
             <li><strong>Fee:</strong> ₹${appointmentData.amount}</li>
         </ul>
+
+        <div class="meet-link">
+            <p><strong>Virtual Consultation Link (Session Ended):</strong></p>
+            <p>${meetLink}</p>
+            <p>This virtual meeting has now ended.</p>
+        </div>
 
         <div class="thank-you-note">
             <p>Thank you for choosing PawVaidya for your pet's healthcare needs. We hope you and your pet had a great experience.</p>

@@ -37,7 +37,7 @@ export const Doctors = () => {
 
   useEffect(() => {
     applyFilter();
-  }, [speciality, location]); // Re-run the filter when speciality or location changes
+  }, [speciality, location]); // Re-run the filter when speciality or location change
 
   const handleLocationFilter = (selectedLocation) => {
     setLocation(selectedLocation);
@@ -54,7 +54,7 @@ export const Doctors = () => {
             onChange={(e) => handleLocationFilter(e.target.value)}
           >
             <option value="">Select Location</option>
-            {['New Delhi', 'Haryana', 'Mumbai', 'Gujarat'].map((loc) => (
+            {['New Delhi', 'Madhya Pradesh', 'Mumbai', 'Chhattisgarh'].map((loc) => (
               <option key={loc} value={loc}>
                 {loc}
               </option>
